@@ -12,21 +12,20 @@
 # 이런 것만 작성
 
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import List
+
 
 class YouTubeInfo(BaseModel):
-    """유튜브 기본 정보"""
-    video_id:str
-    title:str
-    url:str
-    
+    video_id: str
+    title: str
+    url: str
+
 
 class YouTubeMetaData(BaseModel):
-    """유튜브 메타 정보"""
-    video_id:str
-    title:str
-    channel_name:str
-    description:str
-    thumbnail_url:str|None
-    chapters:list
-    tags:list
+    video_id: str
+    title: str
+    channel_name: str
+    description: str
+    thumbnail_url: str | None
+    chapters: list
+    tags: list
