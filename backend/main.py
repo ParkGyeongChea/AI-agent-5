@@ -9,6 +9,9 @@
 # ※ 실제 비즈니스 로직은 여기 작성하지 않는다.
 # ※ 서비스 로직은 services/ 폴더에서 관리한다.
 
+from schemas.youtube_schema import YouTubeInfo, YouTubeMetaData
+from typing import List, Dict, Optional
+from services import youtube_service as youtube
 
 from fastapi import FastAPI 
 from pydantic import BaseModel
@@ -125,6 +128,19 @@ def recommend(data:RequestData):
 
 
 
+@app.get("/chat/search/{query}", response_model=List[YouTubeInfo])
+def get_video_infos(query:str):
+    
+    lists = youtube.get_video_list(query=query)
+    return lists
+
+@app.get("/video/{viedo_id}", response_model=YouTubeMetaData)
+def get_video_data(viedo_id:str):
+    return youtube.get_video_data(video_id=viedo_id)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="localhost", port=8000, reload=True)
 
 
 
