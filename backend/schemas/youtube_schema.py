@@ -11,21 +11,28 @@
 
 # 이런 것만 작성
 
-from pydantic import BaseModel
-from typing import List
-
+from pydantic import BaseModel, Field
+from typing import List, Dict, Optional
 
 class YouTubeInfo(BaseModel):
-    video_id: str
-    title: str
-    url: str
+    """유튜브 기본 정보"""
+    video_id:str = Field(description="영상 id")
+    title:str = Field(description="영상 제목")
+    url:str = Field(description="영상 url")
 
 
-class YouTubeMetaData(BaseModel):
-    video_id: str
-    title: str
-    channel_name: str
-    description: str
-    thumbnail_url: str | None
-    chapters: list
-    tags: list
+class YouTubeMetaData(YouTubeInfo):
+    """유튜브 메타 정보"""
+    channel_name:str = Field(description="채널")
+    description:str = Field(description="설명")
+    thumbnail_url:str|None = Field(description="썸네일")
+    chapters:list = Field(description="챕터")
+    tags:list = Field(description="태그")
+
+class YouTubeTimeLineTranscrabe(BaseModel):
+    """유튜브 타임라인 자막 정보"""
+    timeline:List[Dict[str, str]] = Field(description="타임라인 자막 - {'start': '00:00', 'text': '안녕하세요.'} ")
+    
+class YouTubeChapter(BaseModel):
+    """유튜브 챕터 정보"""
+    chapters:List = Field(description="챕터 목록 - {'start': '00:00', 'text': '안녕하세요.'} ") 
