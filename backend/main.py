@@ -9,14 +9,31 @@
 # ※ 실제 비즈니스 로직은 여기 작성하지 않는다.
 # ※ 서비스 로직은 services/ 폴더에서 관리한다.
 
+from fastapi import FastAPI 
+from pydantic import BaseModel
+from langchain_openai import ChatOpenAI
 
-from fastapi import FastAPI
-from api.youtube_router import router as youtube_router
+import os
+import requests 
+
+from dotenv import load_dotenv
+
+load_dotenv()
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
+llm = ChatOpenAI(        
+    model="gpt-4o-mini",
+    temperature=0
+)
 
 app = FastAPI()
-
-app.include_router(youtube_router)
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="localhost", port=8000, reload=True)
+
+
+
+
+
+
