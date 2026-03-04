@@ -9,8 +9,13 @@
 # ※ GPT 관련 로직은 모두 이 파일에서 관리한다.
 
 # ChatOpenAI, LangChain, LangGraph 관련 코드는 여기
+from schemas.youtube_schema import YouTubeChapters
+from prompts import chapter_split_prompt
 
 from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -36,3 +41,14 @@ def summarize_video(title: str, description: str) -> str:
 
     response = llm.invoke(prompt)
     return response.content
+
+
+def chapter_split(transcript_data:str) -> YouTubeChapters:
+    """자막을 기반으로 4~8개의 챕터를 생성하여 반환"""
+        
+    try:
+        chapters = []
+    except Exception as e:
+        print(e)    
+        
+    return YouTubeChapters(data=chapters)

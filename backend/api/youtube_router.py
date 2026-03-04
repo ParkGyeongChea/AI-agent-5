@@ -13,7 +13,7 @@ from fastapi import APIRouter
 from typing import List
 from pydantic import BaseModel
 
-from schemas.youtube_schema import YouTubeInfo, YouTubeMetaData, YouTubeTimeLineTranscrabe, YouTubeChapter
+from schemas.youtube_schema import YouTubeInfo, YouTubeMetaData, YouTubeTimeLineTranscribe, YouTubeChapters, YouTubeFullDetail
 from services import youtube_service, llm_service
 
 router = APIRouter()
@@ -30,14 +30,25 @@ async def get_video_infos(query:str):
 async def get_video_data(viedo_id:str):
     return youtube_service.get_video_metadata(video_id=viedo_id)
 
-@router.post("/video/info/transcribe/{viedo_id}", response_model=YouTubeTimeLineTranscrabe)
+@router.post("/video/info/transcribe/{viedo_id}", response_model=YouTubeTimeLineTranscribe)
 async def get_transcrabe(viedo_id:str):
-    return youtube_service.get_video_transcrabe(viedo_id)
+    return youtube_service.get_video_transcribe(viedo_id)
 
-@router.post("/video/info/chapter/{viedo_id}", response_model=YouTubeChapter)
+@router.post("/video/info/chapter/{viedo_id}", response_model=YouTubeChapters)
 async def get_video_chapter(viedo_id:str):
     return youtube_service.get_video_chapter(viedo_id)
 
+@router.post("/video/info/full/{viedo_id}", response_model=YouTubeFullDetail)
+async def get_video_full_detail(viedo_id:str):
+    # viedo_id= "rG1RT_SCZcE" # 테스트용 id - 챕터 없는 뉴스 영상
+    full_data = youtube_service.get_video_full_detail(viedo_id)
+    
+    # 챕터 정보가 없으면
+    if not full_data.chapters.data:
+        data = llm_service.chapter_split(full_data.get_full_transcript())
+        full_data.chapters = data
+        
+    return full_data
 
 @router.post("/recommend")
 def recommend(data: RequestData):
