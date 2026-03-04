@@ -83,3 +83,21 @@ def recommend(data: RequestData):
         })
 
     return {"videos": result}
+
+@router.post("/recommend/full")
+async def recommend_full(data: RequestData):
+
+    videos = youtube_service.get_video_list(query=data.query, count=3)
+
+    results = []
+
+    for video in videos:
+
+        video_id = video.video_id
+
+        # 이미 만든 full_detail 로직 재사용
+        full_data = await get_video_full_detail(video_id)
+
+        results.append(full_data)
+
+    return {"videos": results}
