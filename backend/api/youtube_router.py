@@ -40,14 +40,23 @@ async def get_video_chapter(viedo_id:str):
 
 @router.post("/video/info/full/{viedo_id}", response_model=YouTubeFullDetail)
 async def get_video_full_detail(viedo_id:str):
-    # viedo_id= "rG1RT_SCZcE" # 테스트용 id - 챕터 없는 뉴스 영상
+    
     full_data = youtube_service.get_video_full_detail(viedo_id)
     
-    # 챕터 정보가 없으면
+    # 챕터 정보가 없으면 LLM 챕터 생성
     if not full_data.chapters.data:
-        data = llm_service.chapter_split(full_data.get_full_transcript())
+        data = llm_service.chapter_split(full_data.get_full_transcript())       
         full_data.chapters = data
-        
+         
+    #영상 요약 + 타임라인 생성
+    summary_data = llm_service.summarize_transcript(
+        full_data.get_full_transcript()
+    )
+    
+    full_data.summary = summary_data.get("summary")
+    full_data.timeline = summary_data.get("timeline")
+    
+    
     return full_data
 
 @router.post("/recommend")

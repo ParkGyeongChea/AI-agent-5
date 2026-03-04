@@ -52,6 +52,9 @@ class YouTubeFullDetail(YouTubeMetaData):
     
     timeLine_transcribe:YouTubeTimeLineTranscribe = Field(description="타임라인 자막 - {'start': '00:00', 'text': '안녕하세요.'} ")
     
+    summary: str | None = None
+    timeline: List[Dict] | None = None
+    
     def get_full_transcript(self) -> str:
         """자막 텍스트를 반환
 
