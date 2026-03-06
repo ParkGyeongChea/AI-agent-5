@@ -7,30 +7,50 @@
 # - 썸네일, 제목, 설명 정리
 
 # ※ 외부 API 통신 로직은 이 파일에서 관리한다.
+
 import yt_dlp, requests
-from schemas.youtube_schema import YouTubeInfo, YouTubeMetaData, YouTubeTimeLineTranscribe, YouTubeChapters, YouTubeFullDetail
+from core.config import MAX_VIDEO_DURATION_SECODS # 추가
+from schemas.youtube_schema import YouTubeInfo, YouTubeMetaData, YouTubeTranscribe, YouTubeFullDetail, YouTubeTimeLine
 from typing import List, Dict
 from fastapi import HTTPException
 
+#######################################################################
+# 영상 시간 제한 추가 함수 ,26 3.5 추가
 
 def get_video_list(query: str, count: int = 3) -> List[YouTubeInfo]:
-    """요청 갯수 만큼 유튜브 영상 리스트 반환"""
 
     try:
         with yt_dlp.YoutubeDL({"quiet": True, "skip_download": True}) as ydl:
-            info = ydl.extract_info(f"ytsearch{count}:{query}", download=False)
+            info = ydl.extract_info(f"ytsearch10:{query}", download=False)
 
-        return [
-            YouTubeInfo(
-                video_id=video.get("id", ""),
-                title=video.get("title", ""),
-                url=video.get("webpage_url", "")
-            )
-            for video in info.get("entries", [])
-        ]
+            results = []
+        
+            for video in info.get("entries", []):
+                
+                duration = video.get("duration",0)
 
+                #30분 이상 영상은 제외
+                if duration > MAX_VIDEO_DURATION_SECODS:
+                    continue
+                results.append(
+                    YouTubeInfo(
+                        video_id=video.get("id", ""),
+                        title=video.get("title", ""),
+                        url=video.get("webpage_url", ""),
+                        thumbnail_url=f"https://img.youtube.com/vi/{video.get('id', '')}/0.jpg",
+                        description=video.get("description", "") or "" #3.6추가, 검색 결과에서 설명을 같이 담음
+                    )
+                )
+                #개수 채우면 종료
+                if len(results) == count:
+                    break
+            return results
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+#######################################################################
+
+         
 
 def get_video_metadata(video_id: str) -> YouTubeMetaData:
     """유튜브 영상 메타 정보 반환"""
@@ -47,8 +67,6 @@ def get_video_metadata(video_id: str) -> YouTubeMetaData:
             channel_name=info.get("uploader", ""),
             description=info.get("description", ""),
             thumbnail_url=info.get("thumbnail"),
-            chapters=YouTubeChapters(data=info.get("chapters") or []),
-            tags=info.get("tags") or [],
             url=url
         )
 
@@ -62,17 +80,26 @@ def _parse_vtt(text) -> List[Dict]:
     lines_data = []
 
     lines = text.split("\n")
+    
     for i in range(len(lines)):
+        
         if "-->" in lines[i]:
+            
             timestamp = lines[i].strip()
-            text = lines[i+1].strip()
-            lines_data.append({
-                "timestamp": timestamp,
-                "text": text
-            })
+
+            subtitle_text = ""
+
+            # 다음 줄 존재 확인 함수
+            if i + 1 < len(lines):
+                subtitle_text = lines[i+1].strip()
+
+            if subtitle_text:
+                lines_data.append({
+                    "timestamp": timestamp,
+                    "text": subtitle_text
+                })
 
     return lines_data
-    
     
 def get_video_transcribe(video_id: str):
     """유튜브 영상 자막 반환"""
@@ -80,6 +107,7 @@ def get_video_transcribe(video_id: str):
     # 테스트용 id
     # "rb3ZYR_Q1po" - 챕터 없음, 자막 있음
     # "LcPrSL4sEOc" - 챕터 있음, 자막 없음
+    #  PzeQ-H9q3Y8
     
     langs = ["ko", "en"]
     ydl_opts = {
@@ -93,7 +121,9 @@ def get_video_transcribe(video_id: str):
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
-
+        
+        
+    
         requested_subs = info.get('subtitles', {})      # 일반
         auto_subs = info.get('automatic_captions', {})  # 자동
         
@@ -124,12 +154,11 @@ def get_video_transcribe(video_id: str):
                             "start": f"{int(m):02}:{int(float(s)):02}",
                             "title": line["text"]
                         })
-                    
-                    return YouTubeTimeLineTranscribe(
-                        timelines=timeline,
+                    return YouTubeTranscribe(
+                        transcript=timeline
                     )
-    print(f"\n-------챕터 정보를 찾을 수 없습니다. 직접 구현 필요!")
-    return YouTubeTimeLineTranscribe(timelines=[])
+    print(f"\n-------자막 정보를 찾을 수 없습니다. 직접 구현 필요!")
+    return YouTubeTranscribe(transcript=[])
 
 def _format_time(seconds):
     """시간(초) -> 'MM:SS' 형식으로 변환"""
@@ -138,7 +167,7 @@ def _format_time(seconds):
     minutes, secs = divmod(int(seconds), 60)
     return f"{minutes:02}:{secs:02}"
 
-def get_video_chapter(video_id:str):
+def get_video_timeline(video_id:str):
     """유튜브 영상 챕터 반환"""
     
     # 테스트용 id
@@ -154,7 +183,7 @@ def get_video_chapter(video_id:str):
     if len(chapters) > 0:
         
         data = [
-            {"start": _format_time(c.get("start_time", 0)), "title": c.get("title", "")}
+            {"time": _format_time(c.get("start_time", 0)), "summary": c.get("title", "")}
             for c in chapters
         ]
         print(f"\n-------챕터: {data}")
@@ -163,7 +192,7 @@ def get_video_chapter(video_id:str):
     else:
         print(f"\n-------챕터 정보를 찾을 수 없습니다. 직접 구현 필요!")
     
-    return YouTubeChapters(data=data)
+    return YouTubeTimeLine(timelines=data)
 
 
 def get_video_full_detail(video_id:str):
@@ -226,24 +255,8 @@ def get_video_full_detail(video_id:str):
         else:
             print(f"\n-------자막 정보를 찾을 수 없습니다. 직접 구현 필요!")
             
-        # 챕터
-        chapters = info.get("chapters") or []
-        if len(chapters) > 0:
-            
-            data = [
-                {"start": _format_time(c.get("start_time", 0)), "title": c.get("title", "")}
-                for c in chapters
-            ]
-            print(f"\n-------챕터: {data}")
-        else:
-            print(f"\n-------챕터 정보를 찾을 수 없습니다. 직접 구현 필요!")
-            
-        
-        chapter = YouTubeChapters(
-            data=chapters
-        )
-        timeLine_transcribe = YouTubeTimeLineTranscribe(
-            timelines=timelines
+        timeLine_transcribe = YouTubeTranscribe(
+            transcript=timelines
         )
         
         return YouTubeFullDetail(
@@ -252,8 +265,6 @@ def get_video_full_detail(video_id:str):
             channel_name=info.get("uploader", ""),
             description=info.get("description", ""),
             thumbnail_url=info.get("thumbnail"),
-            chapters=chapter,
-            tags=info.get("tags") or [],
             url=info.get("webpage_url", ""),
-            timeLine_transcribe=timeLine_transcribe,
+            transcribe=timeLine_transcribe
         )
