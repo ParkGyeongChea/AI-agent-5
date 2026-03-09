@@ -23,7 +23,7 @@ llm = ChatOpenAI(
 )
 
 
-def split_transcript_into_chunks(transcript_list: list, chunk_size: int = 120):
+def split_transcript_into_chunks(transcript_list: list, chunk_size: int = 200):
     #추후에 token chunk 로 변경될 수도 있음
     
     """
