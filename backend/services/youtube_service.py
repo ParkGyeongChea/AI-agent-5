@@ -9,8 +9,8 @@
 # ※ 외부 API 통신 로직은 이 파일에서 관리한다.
 
 import yt_dlp, requests
-from core.config import MAX_VIDEO_DURATION_SECODS # 추가
-from schemas.youtube_schema import YouTubeInfo, YouTubeMetaData, YouTubeTranscribe, YouTubeFullDetail, YouTubeTimeLine
+from backend.core.config import MAX_VIDEO_DURATION_SECODS # 추가
+from backend.schemas.youtube_schema import YouTubeInfo, YouTubeMetaData, YouTubeTranscribe, YouTubeFullDetail, YouTubeTimeLine
 from typing import List, Dict
 from fastapi import HTTPException
 

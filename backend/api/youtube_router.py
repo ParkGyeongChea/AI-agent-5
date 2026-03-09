@@ -5,8 +5,8 @@ from fastapi import APIRouter
 from typing import List
 from pydantic import BaseModel
 import asyncio #3.6 추가
-from schemas.youtube_schema import YouTubeInfo, YouTubeMetaData, YouTubeTimeLine, YouTubeFullDetail, YouTubeTranscribe
-from services import youtube_service, llm_service
+from backend.schemas.youtube_schema import YouTubeInfo, YouTubeMetaData, YouTubeTimeLine, YouTubeFullDetail, YouTubeTranscribe
+from backend.services import youtube_service, llm_service
 
 router = APIRouter()
 

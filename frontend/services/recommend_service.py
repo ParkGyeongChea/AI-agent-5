@@ -1,57 +1,37 @@
+import requests
+import os
 
-# ==========================================================
-# 1️⃣ 필요한 모듈 import
-# ==========================================================
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
-import time
-from mock.recommend_mock import recommend_mock
+def fetch_recommend(query: str):
 
-# ==========================================================
-# 2️⃣ 추천 서비스 함수 정의
-# ==========================================================
+    try:
+        r = requests.post(
+            f"{BACKEND_URL}/test/video/{query}",
+            timeout=10
+        )
 
-def fetch_recommend(query : str) :
-
-    # ------------------------------------------------------
-    # 2-1 최대 재시도 횟수 설정
-    # ------------------------------------------------------
-    
-    max_retry = 3   # 최대 재시도 횟수
-    
-    # ------------------------------------------------------
-    # 2-2 재시도 루프
-    # ------------------------------------------------------
-    
-    for attempt in range(max_retry) :
-        try :
-            
-            time.sleep(1)   # AI 처리 지연 시뮬레이션
-            
-            # ----------------------------------------------
-            # 성공 시 반환 구조
-            # ----------------------------------------------
-            
+        if r.status_code != 200:
             return {
-                "data" : 
-                {"videos" : recommend_mock["videos"]},
-                "error" : None
+                "data": None,
+                "error": {
+                    "type": "BACKEND_ERROR",
+                    "message": r.text,
+                    "retryable": False
+                }
             }
-        
-        except Exception as e :
-            # ----------------------------------------------
-            # 마지막 시도까지 실패한 경우
-            # ----------------------------------------------
-            if attempt == max_retry - 1 :
-                return {
-                        "data" : None,
-                        "error": {
-                            "type" : "RECOMMEND_FAILED",
-                            "message" : "추천 처리 중 오류가 발생했습니다",
-                            "retryable" : False
-                            }
-                        }
-            
-            # ----------------------------------------------
-            # 재시도 전 대기
-            # ----------------------------------------------
-            time.sleep(0.5)
+
+        return {
+            "data": {"videos": r.json()},
+            "error": None
+        }
+
+    except Exception as e:
+        return {
+            "data": None,
+            "error": {
+                "type": "CONNECTION_ERROR",
+                "message": str(e),
+                "retryable": True
+            }
+        }

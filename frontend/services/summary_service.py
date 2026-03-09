@@ -1,58 +1,37 @@
+import requests
+import os
 
-# ==========================================================
-# 1️⃣ 모듈 import
-# ==========================================================
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
-import time    # 처리 지연 시뮬레이션용
-from mock.summary_mock import summary_mock
+def fetch_summary(video_id: str):
 
-# ==========================================================
-# 2️⃣ 요약 데이터 요청 함수
-# ==========================================================
+    try:
+        r = requests.post(
+            f"{BACKEND_URL}/test/video/info/full/{video_id}",
+            timeout=20
+        )
 
-def fetch_summary(video_id : str) :
-    
-    try : 
-        # --------------------------------------------------
-        # 2-1 처리 지연 시뮬레이션 (LLM 호출 가정)
-        # --------------------------------------------------
-
-        time.sleep(1)
-        
-        # --------------------------------------------------
-        # 2-2 video_id 존재 여부 검사
-
-        if video_id not in summary_mock :
-            
+        if r.status_code != 200:
             return {
-                "data" : None,  # 실패시 data는 반드시 None
-                "error" : {
-                    "type" : "SUMMARY_NOT_FOUND",
-                    "message" : "요약 데이터를 찾을 수 없습니다",
-                    "retryable" : False
+                "data": None,
+                "error": {
+                    "type": "BACKEND_ERROR",
+                    "message": r.text,
+                    "retryable": False
                 }
             }
-            
-        # --------------------------------------------------
-        # 2-3 성공 반환 구조
-        # --------------------------------------------------
-        
+
         return {
-            "data" : summary_mock[video_id],
-            "error" : None
+            "data": r.json(),
+            "error": None
         }
-        
-    # --------------------------------------------------
-    # 2-4 예외 발생 시 처리
-    # --------------------------------------------------
-        
-    except Exception :
-        
+
+    except Exception as e:
         return {
-            "data" : None,
-            "error" : {
-                "type" : "SUMMARY_FAILED",
-                "message" : "요약 처리 중 오류가 발생했습니다",
-                "retryable" : False
+            "data": None,
+            "error": {
+                "type": "CONNECTION_ERROR",
+                "message": str(e),
+                "retryable": True
             }
         }
