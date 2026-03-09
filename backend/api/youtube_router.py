@@ -55,9 +55,15 @@ async def get_video_full_detail(viedo_id:str):
     # 자막 가져오기
     transcript = full_data.transcribe.transcript
 
-    # # 자동 챕터 생성
+    
+    
+    
+    #자막 없는 영상 gpt 호출하지 않는 코드 , 이 코드 적용하려면 아래 영상 요약 코드 주석 처리 필요.
     # if transcript:
-    #     full_data.chapters = llm_service.chapter_split(transcript)
+    #     summary_data = await llm_service.summarize_transcript(transcript)
+    # else:
+    #     summary_data = {"summary": "", "timeline": []}
+
 
     # 영상 요약
     summary_data = await llm_service.summarize_transcript(transcript)
