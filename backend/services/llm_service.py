@@ -7,8 +7,8 @@
 # ※ GPT 관련 로직은 모두 이 파일에서 관리한다.
 
 # ChatOpenAI, LangChain, LangGraph 관련 코드는 여기
-from backend.schemas.youtube_schema import YouTubeTimeLine
-from backend.prompts import chapter_split_prompt
+from schemas.youtube_schema import YouTubeTimeLine
+from prompts import chapter_split_prompt
 import asyncio
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate

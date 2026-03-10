@@ -11,7 +11,7 @@
 
 
 from fastapi import FastAPI
-from backend.api.youtube_router import router as youtube_router
+from api.youtube_router import router as youtube_router
 
 app = FastAPI()
 
