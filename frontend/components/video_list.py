@@ -10,11 +10,13 @@ import streamlit as st
 # ==========================================================
 
 def truncate_text(text: str, max_length: int):
+
     if not text:
         return ""
 
     if len(text) > max_length:
         return text[:max_length] + "..."
+
     return text
 
 
@@ -75,12 +77,25 @@ def render_video_list():
         unsafe_allow_html=True
     )
 
-    # 선택 버튼 (Hero 영상)
+    # ======================================================
+    # Hero 영상 선택 버튼
+    # ======================================================
+
     if st.button("이 영상 보기 🔎", key=f"main_{main_video['video_id']}"):
+
+        # 선택 영상 변경
         st.session_state.selected_video_id = main_video["video_id"]
+
+        # 🔥 기존 데이터 초기화
         st.session_state.summary = None
         st.session_state.timeline = []
+        st.session_state.lecture_note = None
+        st.session_state.quiz_data = None
         st.session_state.error = None
+
+        # 🔥 핵심 수정 (탭 초기화)
+        st.session_state.active_tab = "summary"
+
         st.rerun()
 
     # ======================================================
@@ -119,8 +134,18 @@ def render_video_list():
                 )
 
                 if st.button("이 영상 보기 🔎", key=f"sub_{video['video_id']}"):
+
+                    # 선택 영상 변경
                     st.session_state.selected_video_id = video["video_id"]
+
+                    # 🔥 기존 데이터 초기화
                     st.session_state.summary = None
                     st.session_state.timeline = []
+                    st.session_state.lecture_note = None
+                    st.session_state.quiz_data = None
                     st.session_state.error = None
+
+                    # 🔥 핵심 수정 (탭 초기화)
+                    st.session_state.active_tab = "summary"
+
                     st.rerun()

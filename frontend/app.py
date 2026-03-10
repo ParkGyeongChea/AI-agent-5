@@ -1,10 +1,9 @@
-
 # ==========================================================
 # 1️⃣ 모듈 import
 # ==========================================================
 
 import streamlit as st
-from utils.state import init_state    # 상태 초기화 함수 가져오기
+from utils.state import init_state
 from components.search import render_search
 from components.video_list import render_video_list
 from components.summary_panel import render_summary_panel
@@ -15,49 +14,46 @@ from components.summary_panel import render_summary_panel
 
 st.set_page_config(
     page_title="AI Content Agent",
-    layout="wide"   # 화면을 좌우 2컬럼으로 쓰기 위함
+    layout="wide"
 )
 
 # ==========================================================
-# 3️⃣ 상태 초기화 (UI보다 먼저)
+# 3️⃣ 상태 초기화
 # ==========================================================
 
-init_state()    # 상태 구조를 보장하는 함수
+init_state()
 
 # ==========================================================
 # 4️⃣ 타이틀
 # ==========================================================
 
 st.title("콘텐츠 추천 챗봇 AI Agent 🕹️")
-# st.markdown("---")
 
 # ==========================================================
-# 5️⃣ 2컬럼 레이아웃 구성
+# 5️⃣ 2컬럼은 항상 생성 (구조 유지)
 # ==========================================================
 
 col_left, col_right = st.columns([2, 1])
 
 # ==========================================================
-# 6️⃣ 왼쪽 영역 (검색 + 영상 목록)
+# 6️⃣ 왼쪽 영역
 # ==========================================================
 
-with col_left :
-    
-    # 검색 UI
+with col_left:
+
     render_search()
-    
-    # 에러 표시
-    if st.session_state.error :
+
+    if st.session_state.error:
         st.error(st.session_state.error)
-    
-    # 영상 목록 표시
+
     render_video_list()
 
 # ==========================================================
-# 7️⃣ 오른쪽 영역 (요약 패널 자리)
+# 7️⃣ 오른쪽 영역 (조건부 렌더링)
 # ==========================================================
 
 with col_right:
 
-    # 요약 패널 렌더링 (컴포넌트 분리 구조)
-    render_summary_panel()
+    # 🔥 영상 목록이 있을 때만 출력
+    if st.session_state.videos:
+        render_summary_panel()
