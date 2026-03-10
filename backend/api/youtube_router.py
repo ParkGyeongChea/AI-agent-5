@@ -300,7 +300,7 @@ async def test_video_timeline(video_id:str):
         )
 
 
-@router.post("/video/service/lecture-note/{video_id}")
+@router.post("/test/video/service/lecture-note/{video_id}")
 async def test_video_lecture_note(video_id:str):
     """
     유튜브 학습을 위한 프리미엄 강의 자료 - LLM 모델 호출    
@@ -506,7 +506,7 @@ async def test_video_lecture_note(video_id:str):
     }
     return result
 
-@router.post("/video/service/quiz/{viedo_id}")
+@router.post("/test/video/service/quiz/{viedo_id}")
 async def test_video_quiz(
     viedo_id:str, 
     questions:int=5,    # 문항수(+ 도전문제)
