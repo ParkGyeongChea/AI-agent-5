@@ -8,12 +8,12 @@
 
 # ※ 외부 API 통신 로직은 이 파일에서 관리한다.
 
-import yt_dlp, requests
+import yt_dlp, requests, json
 from core.config import MAX_VIDEO_DURATION_SECODS # 추가
-from schemas.youtube_schema import YouTubeInfo, YouTubeMetaData, YouTubeTranscribe, YouTubeFullDetail, YouTubeTimeLine
+from schemas.youtube_schema import YouTubeInfo, YouTubeTranscribe, YouTubeFullDetail, YouTubeTimeLine
 from typing import List, Dict
 from fastapi import HTTPException
-
+from pathlib import Path
 #######################################################################
 # 영상 시간 제한 추가 함수 ,26 3.5 추가
 
@@ -38,7 +38,9 @@ def get_video_list(query: str, count: int = 3) -> List[YouTubeInfo]:
                         title=video.get("title", ""),
                         url=video.get("webpage_url", ""),
                         thumbnail_url=f"https://img.youtube.com/vi/{video.get('id', '')}/0.jpg",
-                        description=video.get("description", "") or "" #3.6추가, 검색 결과에서 설명을 같이 담음
+                        description=video.get("description", "") or "", #3.6추가, 검색 결과에서 설명을 같이 담음
+                        channel_name=video.get("uploader", ""),
+                        duration=video.get("duration", 0)
                     )
                 )
                 #개수 채우면 종료
@@ -52,26 +54,26 @@ def get_video_list(query: str, count: int = 3) -> List[YouTubeInfo]:
 
          
 
-def get_video_metadata(video_id: str) -> YouTubeMetaData:
-    """유튜브 영상 메타 정보 반환"""
+# def get_video_metadata(video_id: str) -> YouTubeMetaData:
+#     """유튜브 영상 메타 정보 반환"""
     
-    try:
-        url = f"https://www.youtube.com/watch?v={video_id}"
+#     try:
+#         url = f"https://www.youtube.com/watch?v={video_id}"
 
-        with yt_dlp.YoutubeDL({"quiet": True, "skip_download": True}) as ydl:
-            info = ydl.extract_info(url, download=False)
+#         with yt_dlp.YoutubeDL({"quiet": True, "skip_download": True}) as ydl:
+#             info = ydl.extract_info(url, download=False)
 
-        return YouTubeMetaData(
-            video_id=info.get("id", ""),
-            title=info.get("title", ""),
-            channel_name=info.get("uploader", ""),
-            description=info.get("description", ""),
-            thumbnail_url=info.get("thumbnail"),
-            url=url
-        )
+#         return YouTubeMetaData(
+#             video_id=info.get("id", ""),
+#             title=info.get("title", ""),
+#             channel_name=info.get("uploader", ""),
+#             description=info.get("description", ""),
+#             thumbnail_url=info.get("thumbnail"),
+#             url=url
+#         )
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 def _parse_vtt(text) -> List[Dict]:
@@ -100,15 +102,18 @@ def _parse_vtt(text) -> List[Dict]:
                 })
 
     return lines_data
-    
-def get_video_transcribe(video_id: str):
+
+def get_video_transcribe(video_id: str) -> YouTubeTranscribe:
     """유튜브 영상 자막 반환"""
     
-    # 테스트용 id
-    # "rb3ZYR_Q1po" - 챕터 없음, 자막 있음
-    # "LcPrSL4sEOc" - 챕터 있음, 자막 없음
-    #  PzeQ-H9q3Y8
+    path = Path(__file__).parent.parent / "data/subtitles"
+    path.mkdir(parents=True, exist_ok=True)  
+    target_path = path / f"{video_id}.json"
     
+    if target_path.exists():
+        with open(target_path, "r", encoding="utf-8") as f:
+            return YouTubeTranscribe(transcript=json.load(f))
+            
     langs = ["ko", "en"]
     ydl_opts = {
         "writesubtitles": True,        # 일반 자막
@@ -121,8 +126,6 @@ def get_video_transcribe(video_id: str):
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
-        
-        
     
         requested_subs = info.get('subtitles', {})      # 일반
         auto_subs = info.get('automatic_captions', {})  # 자동
@@ -137,7 +140,7 @@ def get_video_transcribe(video_id: str):
                 for sub in subs:
                     if sub.get('ext') == 'vtt':
                         sub_url = sub['url']
-                        # 2. 현재 찾은 언어(lang)를 정확히 출력합니다.
+                        # 현재 찾은 언어(lang)를 정확히 출력합니다.
                         print(f"[{lang}] vtt 자막 URL: {sub_url}")
                         break
                 
@@ -145,17 +148,21 @@ def get_video_transcribe(video_id: str):
                     res = requests.get(sub_url)
                     vtt_data = _parse_vtt(res.text)
                     
-                    timeline = []
+                    transcript = []
                     for line in vtt_data[1::2]:
                         timestamp = line["timestamp"].split(" --> ")[0]                        
                         h, m, s = timestamp.split(':')
                         m = int(h) * 60 + int(m)
-                        timeline.append({
+                        transcript.append({
                             "start": f"{int(m):02}:{int(float(s)):02}",
-                            "title": line["text"]
+                            "text": line["text"]
                         })
+                        
+                    with open(target_path, "w", encoding="utf-8") as f:
+                        json.dump(transcript, f, ensure_ascii=False, indent=2)
+                        
                     return YouTubeTranscribe(
-                        transcript=timeline
+                        transcript=transcript
                     )
     print(f"\n-------자막 정보를 찾을 수 없습니다. 직접 구현 필요!")
     return YouTubeTranscribe(transcript=[])
@@ -196,75 +203,7 @@ def get_video_timeline(video_id:str):
 
 
 def get_video_full_detail(video_id:str):
-    """유튜브 영상의 자막, 챕터, 메타 정보를 한 번에 반환"""
-    
-    # 테스트용 id
-    # "rb3ZYR_Q1po" - 챕터 없음, 자막 있음
-    # "LcPrSL4sEOc" - 챕터 있음, 자막 없음
-    
-    langs = ["ko", "en"]
-    ydl_opts = {
-        "writesubtitles": True,        # 일반 자막
-        "writeautomaticsub": True,     # 자동 자막
-        "subtitleslangs": langs,
-        "subtitlesformat": "vtt",      # vtt 형식
-        "skip_download": True,
-        "quiet": False,                # 로그 출력 유무
-    }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
-        
-        # 자막
-        requested_subs = info.get('subtitles', {})      # 일반
-        auto_subs = info.get('automatic_captions', {})  # 자동
-        
-        sub_url = None
-        for lang in langs:
-            # 일반 자막을 먼저 확인하고, 없으면 자동 자막 리스트 사용
-            subs_list = requested_subs.get(lang) or auto_subs.get(lang)
-            
-            if subs_list:  # 해당 언어의 자막 리스트가 존재하면
-                # 리스트 안에서 VTT 형식 자막 URL 찾기
-                for sub in subs_list:
-                    if sub.get('ext') == 'vtt':
-                        sub_url = sub['url']
-                        print(f"\n-------[{lang}] vtt 자막 URL: {sub_url}")
-                        break
-                        
-            if sub_url:
-                break  # 우선순위가 높은 언어의 자막을 찾았으므로 언어 검색 루프 전체 종료
-            
-        # 자막 요청
-        timelines = []
-        if sub_url:
-            res = requests.get(sub_url)
-            
-            # 자막 파싱
-            vtt_data = _parse_vtt(res.text)
-            for line in vtt_data[1::2]:
-                timestamp = line["timestamp"].split(" --> ")[0]
-                h, m, s = timestamp.split(':')
-                m = int(h) * 60 + int(m)
-                timelines.append(
-                    {
-                        "start": f"{int(m):02}:{int(float(s)):02}",
-                        "text": line["text"]
-                    }
-                )
-        else:
-            print(f"\n-------자막 정보를 찾을 수 없습니다. 직접 구현 필요!")
-            
-        timeLine_transcribe = YouTubeTranscribe(
-            transcript=timelines
-        )
-        
-        return YouTubeFullDetail(
-            video_id=info.get("id", ""),
-            title=info.get("title", ""),
-            channel_name=info.get("uploader", ""),
-            description=info.get("description", ""),
-            thumbnail_url=info.get("thumbnail"),
-            url=info.get("webpage_url", ""),
-            transcribe=timeLine_transcribe
-        )
+    """유튜브 영상의 자막, 챕터, 메타 정보를 한 번에 반환"""        
+    return YouTubeFullDetail(
+        transcribe=get_video_transcribe(video_id=video_id),
+    )

@@ -7,9 +7,8 @@
 # ※ GPT 관련 로직은 모두 이 파일에서 관리한다.
 
 # ChatOpenAI, LangChain, LangGraph 관련 코드는 여기
-from schemas.youtube_schema import YouTubeTimeLine
-from prompts import chapter_split_prompt
-import asyncio
+from prompts import timeline_summary_prompt, lecture_note_promp, quiz_prompt
+import asyncio, time
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -50,32 +49,32 @@ def split_transcript_into_chunks(transcript_list: list, chunk_size: int = 200):
     return chunks
 
 
-def chapter_split(transcript_data:list) -> YouTubeTimeLine:
+def get_video_timeline_summary(transcript_data:str, max_words:int=200, entity_range="3~5", iterations:int=3):
     """자막을 기반으로 4~8개의 챕터를 생성하여 반환"""
-        
-    try:
-        transcript_list = transcript_data
-        chunks = split_transcript_into_chunks(transcript_list)
     
-        parser = JsonOutputParser()
+    try:
+        llm.bind(response_format={"type": "json_object"})
         
-        all_chapters = []     
+        # template = chapter_split_prompt.generate_prompt(transcript_data, max_words, entity_range, iterations)
+        prompt = ChatPromptTemplate.from_template(timeline_summary_prompt.template)
+        chain = prompt | llm | JsonOutputParser()
+        result = chain.invoke({
+            "transcript_data":transcript_data,
+            "max_words":max_words,
+            "entity_range":entity_range,
+            "iterations":iterations
+        })
+        print(result)
         
-        for chunk in chunks:
-                     
-            prompt = chapter_split_prompt.generate_prompt(chunk)   
-            response = llm.invoke(prompt) 
-            result = parser.parse(response.content)
-            chapters = result.get("chapters", [])      
-            all_chapters.extend(chapters)
+        if "summary" not in result:
+            result["summary"] = ""
+        if "timeline" not in result or not isinstance(result["timeline"], list):
+            result["timeline"] = []
             
-
     except Exception as e:
         print(e)
-        chapters = []   
         
-    return YouTubeTimeLine(timelines=all_chapters)
-    #fastAPI schema 형태로 변환
+    return result
 
 
 
@@ -207,3 +206,55 @@ JSON 형식으로 출력하라.
     result = parser.parse(response.content)
 
     return [item["summary"] for item in result]
+
+
+# from core.llm_stats import OpenAIStats
+def get_video_quzi(transcript_data:str):
+    """
+    유튜브 영상을 정리하여 프리미엄 강의 노트를 만든다.
+    """
+    
+    try:
+        # stats_runner = OpenAIStats()
+        llm.bind(response_format={"type": "json_object"})
+        prompt = ChatPromptTemplate.from_template(lecture_note_promp.template)
+        chain = prompt | llm | JsonOutputParser()
+        result = chain.invoke({"transcript_data":transcript_data})
+        # result, stats = stats_runner.run_llm(
+        #     llm=chain,
+        #     input={"transcript_data": transcript_data}
+        # )
+        # print(stats)
+        
+    except Exception as e:
+        print(e)
+        result = None
+        
+    return result
+
+
+def get_video_quiz(lecture_content:str, difficulty:str="Mid", num_questions:int=5):
+    """
+    유튜브 영상의 내용을 파악하여 퀴즈를 생성한다.
+    """
+    
+    try:
+        # stats_runner = OpenAIStats()
+        
+        current_date = time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        llm.bind(response_format={"type": "json_object"})
+        prompt = ChatPromptTemplate.from_template(quiz_prompt.template)
+        chain = prompt | llm | JsonOutputParser()
+        result = chain.invoke({
+            "lecture_content":lecture_content,
+            "current_date":current_date,
+            "difficulty":difficulty,
+            "num_questions":num_questions,
+        })
+        
+    except Exception as e:
+        print(e)
+        result = None
+        
+    return result
