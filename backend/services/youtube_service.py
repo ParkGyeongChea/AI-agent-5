@@ -102,7 +102,7 @@ def _parse_vtt(text) -> List[Dict]:
                 })
 
     return lines_data
-    
+
 def get_video_transcribe(video_id: str) -> YouTubeTranscribe:
     """유튜브 영상 자막 반환"""
     

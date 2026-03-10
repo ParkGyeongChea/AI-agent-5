@@ -68,7 +68,26 @@ async def get_video_full_detail(viedo_id:str):
 
     return full_data
 
+@router.post("/video/info/timelne-summary/{viedo_id}", response_model=YouTubeFullDetail)
+def get_video_timeline_summary(viedo_id:str):
+    """
+    유튜브 타임라인(챕터) 정보와 요약 정보를 리턴한다. - LLM 모델 호출    
+    """
+    
+    full_data = youtube_service.get_video_full_detail(viedo_id)
+    summary_data = llm_service.get_video_timeline_summary(full_data.get_full_transcript())
+    full_data.summary = summary_data.get("summary")
+    full_data.timeline = summary_data.get("timeline")
+    return full_data
 
+# @router.post("/video/info/lecture-note/{viedo_id}")
+# def get_video_lecture_note(viedo_id:str):
+#     """
+#     유튜브 학습을 위한 프리미엄 강의 자료 - LLM 모델 호출    
+#     """
+#     transcripts = youtube_service.get_video_transcribe(video_id=viedo_id)
+#     result = llm_service.get_video_lecture_note(transcripts.get_full_transcript())
+#     return result
 
 # @router.post("/recommend")
 # def recommend(data: RequestData):
@@ -149,7 +168,6 @@ async def recommend_full(data: RequestData):
 @router.post("/test/video/{search}", response_model=List[YouTubeInfo])
 async def test_video_search_list(search:str):
     yt_list = [
-        [
             {
                 "video_id": "yytWGELNeOI",
                 "title": "파이썬 무료 기초 강의 - 1강 파이썬이란 무엇인가?",
@@ -178,7 +196,7 @@ async def test_video_search_list(search:str):
                 "duration": 1718
             }
         ]
-    ]
+    
     
     return  [
         YouTubeInfo(
@@ -188,13 +206,15 @@ async def test_video_search_list(search:str):
             url=info['url'],
             channel_name=info['channel_name'],
             duration=info['duration'],
-        )for info in yt_list
+            description=info['description'],
+        ) for info in yt_list
     ]
 
 @router.post("/test/video/info/full/{video_id}", response_model=YouTubeFullDetail)
 async def test_video_timeline(video_id:str):
     yt_list = [
         {
+            "video_id": "T6z-0dpXPvU",
             "transcribe": {
                 "transcript": []
             },
@@ -215,6 +235,7 @@ async def test_video_timeline(video_id:str):
             ]
         },
         {
+            "video_id": "yytWGELNeOI",
             "transcribe": {
                 "transcript": []
             },
@@ -235,6 +256,7 @@ async def test_video_timeline(video_id:str):
             ]
         },
         {
+            "video_id": "kWiCuklohdY",
             "transcribe": {
                 "transcript": []
             },
