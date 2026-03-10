@@ -7,10 +7,8 @@
 # ※ GPT 관련 로직은 모두 이 파일에서 관리한다.
 
 # ChatOpenAI, LangChain, LangGraph 관련 코드는 여기
-from prompts import timeline_summary_prompt
-# from schemas.youtube_schema import YouTubeTimeLine
-# from prompts import lecture_note_promp
-import asyncio
+from prompts import timeline_summary_prompt, lecture_note_promp, quiz_prompt
+import asyncio, time
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -210,26 +208,53 @@ JSON 형식으로 출력하라.
     return [item["summary"] for item in result]
 
 
-# # from core.llm_stats import OpenAIStats
-# def get_video_lecture_note(transcript_data:str):
-#     """
-#     유튜브 영상을 정리하여 프리미엄 강의 노트를 만든다.
-#     """
+# from core.llm_stats import OpenAIStats
+def get_video_quzi(transcript_data:str):
+    """
+    유튜브 영상을 정리하여 프리미엄 강의 노트를 만든다.
+    """
     
-#     try:
-#         # stats_runner = OpenAIStats()
-#         llm.bind(response_format={"type": "json_object"})
-#         prompt = ChatPromptTemplate.from_template(lecture_note_promp.template)
-#         chain = prompt | llm | JsonOutputParser()
-#         result = chain.invoke({"transcript_data":transcript_data})
-#         # result, stats = stats_runner.run_llm(
-#         #     llm=chain,
-#         #     input={"transcript_data": transcript_data}
-#         # )
-#         # print(stats)
+    try:
+        # stats_runner = OpenAIStats()
+        llm.bind(response_format={"type": "json_object"})
+        prompt = ChatPromptTemplate.from_template(lecture_note_promp.template)
+        chain = prompt | llm | JsonOutputParser()
+        result = chain.invoke({"transcript_data":transcript_data})
+        # result, stats = stats_runner.run_llm(
+        #     llm=chain,
+        #     input={"transcript_data": transcript_data}
+        # )
+        # print(stats)
         
-#     except Exception as e:
-#         print(e)
-#         result = None
+    except Exception as e:
+        print(e)
+        result = None
         
-#     return result
+    return result
+
+
+def get_video_quiz(lecture_content:str, difficulty:str="Mid", num_questions:int=5):
+    """
+    유튜브 영상의 내용을 파악하여 퀴즈를 생성한다.
+    """
+    
+    try:
+        # stats_runner = OpenAIStats()
+        
+        current_date = time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        llm.bind(response_format={"type": "json_object"})
+        prompt = ChatPromptTemplate.from_template(quiz_prompt.template)
+        chain = prompt | llm | JsonOutputParser()
+        result = chain.invoke({
+            "lecture_content":lecture_content,
+            "current_date":current_date,
+            "difficulty":difficulty,
+            "num_questions":num_questions,
+        })
+        
+    except Exception as e:
+        print(e)
+        result = None
+        
+    return result
