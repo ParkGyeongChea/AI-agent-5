@@ -357,127 +357,127 @@ with right:
 
                     st.rerun()
 
-# ----------------------------
-# Quiz
-# ----------------------------
-st.markdown("#### Quiz")
+        # ----------------------------
+    # Quiz
+    # ----------------------------
+    st.markdown("#### Quiz")
 
-# 현재 영상 기준 상태 초기화
-if vid not in st.session_state.quiz_answers:
-    st.session_state.quiz_answers[vid] = {}
+    # 현재 영상 기준 상태 초기화
+    if vid not in st.session_state.quiz_answers:
+        st.session_state.quiz_answers[vid] = {}
 
-if vid not in st.session_state.quiz_submitted:
-    st.session_state.quiz_submitted[vid] = False
+    if vid not in st.session_state.quiz_submitted:
+        st.session_state.quiz_submitted[vid] = False
 
-# 퀴즈 자동 로드
-if vid not in st.session_state.quiz_cache:
-    with st.spinner("퀴즈 생성 중..."):
-        quiz_data = fetch_quiz(vid)
-        if quiz_data:
-            st.session_state.quiz_cache[vid] = quiz_data
+    # 퀴즈 자동 로드
+    if vid not in st.session_state.quiz_cache:
+        with st.spinner("퀴즈 생성 중..."):
+            quiz_data = fetch_quiz(vid)
+            if quiz_data:
+                st.session_state.quiz_cache[vid] = quiz_data
 
-quiz_data = st.session_state.quiz_cache.get(vid)
+    quiz_data = st.session_state.quiz_cache.get(vid)
 
-if not quiz_data:
-    st.caption("퀴즈 없음")
+    if not quiz_data:
+        st.caption("퀴즈 없음")
 
-else:
-    questions = quiz_data.get("questions", [])
-    challenge = quiz_data.get("challenge", [])
+    else:
+        questions = quiz_data.get("questions", [])
+        challenge = quiz_data.get("challenge", [])
 
-    if questions:
-        st.caption("객관식 퀴즈를 풀고 채점 버튼을 눌러보세요.")
+        if questions:
+            st.caption("객관식 퀴즈를 풀고 채점 버튼을 눌러보세요.")
 
-        for i, q in enumerate(questions, start=1):
-            q_key = f"{vid}_q_{i}"
-            question_text = q.get("question", "")
-            options = q.get("options", [])
+            for i, q in enumerate(questions, start=1):
+                q_key = f"{vid}_q_{i}"
+                question_text = q.get("question", "")
+                options = q.get("options", [])
 
-            with st.expander(f"Q{i}. {ellipsis(question_text, 100)}", expanded=(i == 1)):
-                st.write(question_text)
+                with st.expander(f"Q{i}. {ellipsis(question_text, 100)}", expanded=(i == 1)):
+                    st.write(question_text)
 
-                if options:
-                    selected = st.radio(
-                        "보기 선택",
-                        options,
-                        index=None,
-                        key=q_key,
-                        label_visibility="collapsed",
-                    )
+                    if options:
+                        selected = st.radio(
+                            "보기 선택",
+                            options,
+                            index=None,
+                            key=q_key,
+                            label_visibility="collapsed",
+                        )
 
-                    # 선택값 저장
-                    if selected is not None:
-                        st.session_state.quiz_answers[vid][i] = selected
+                        # 선택값 저장
+                        if selected is not None:
+                            st.session_state.quiz_answers[vid][i] = selected
 
-                # 채점 이후에만 정답/결과 표시
-                if st.session_state.quiz_submitted[vid]:
+                    # 채점 이후에만 정답/결과 표시
+                    if st.session_state.quiz_submitted[vid]:
+                        correct_answer = q.get("answer", "")
+                        user_answer = st.session_state.quiz_answers[vid].get(i)
+
+                        if user_answer == correct_answer:
+                            st.success("정답입니다.")
+                        else:
+                            st.error("오답입니다.")
+
+                        with st.expander("정답 보기", expanded=False):
+                            st.write(correct_answer)
+
+            # ----------------------------
+            # 채점 / 다시풀기
+            # ----------------------------
+            c1, c2 = st.columns(2)
+
+            with c1:
+                if st.button("채점하기", key=f"grade_{vid}", use_container_width=True):
+                    st.session_state.quiz_submitted[vid] = True
+                    st.rerun()
+
+            with c2:
+                if st.button("다시 풀기", key=f"retry_{vid}", use_container_width=True):
+                    st.session_state.quiz_answers[vid] = {}
+                    st.session_state.quiz_submitted[vid] = False
+
+                    # radio 위젯 상태도 초기화
+                    for i in range(1, len(questions) + 1):
+                        q_key = f"{vid}_q_{i}"
+                        if q_key in st.session_state:
+                            del st.session_state[q_key]
+
+                    st.rerun()
+
+            # ----------------------------
+            # 점수 표시
+            # ----------------------------
+            if st.session_state.quiz_submitted[vid]:
+                score = 0
+                total = len(questions)
+
+                for i, q in enumerate(questions, start=1):
                     correct_answer = q.get("answer", "")
                     user_answer = st.session_state.quiz_answers[vid].get(i)
 
                     if user_answer == correct_answer:
-                        st.success("정답입니다.")
-                    else:
-                        st.error("오답입니다.")
+                        score += 1
 
-                    with st.expander("정답 보기", expanded=False):
-                        st.write(correct_answer)
+                st.markdown(f"**점수: {score} / {total}**")
 
         # ----------------------------
-        # 채점 / 다시풀기
+        # Challenge
         # ----------------------------
-        c1, c2 = st.columns(2)
+        if challenge:
+            st.markdown("##### Challenge")
 
-        with c1:
-            if st.button("채점하기", key=f"grade_{vid}", use_container_width=True):
-                st.session_state.quiz_submitted[vid] = True
-                st.rerun()
+            for i, q in enumerate(challenge, start=1):
+                with st.expander(f"도전문제 {i}"):
 
-        with c2:
-            if st.button("다시 풀기", key=f"retry_{vid}", use_container_width=True):
-                st.session_state.quiz_answers[vid] = {}
-                st.session_state.quiz_submitted[vid] = False
+                    st.write(q.get("question", ""))
 
-                # radio 위젯 상태도 초기화
-                for i in range(1, len(questions) + 1):
-                    q_key = f"{vid}_q_{i}"
-                    if q_key in st.session_state:
-                        del st.session_state[q_key]
+                    with st.expander("정답 보기"):
+                        ans = q.get("answer", "")
 
-                st.rerun()
-
-        # ----------------------------
-        # 점수 표시
-        # ----------------------------
-        if st.session_state.quiz_submitted[vid]:
-            score = 0
-            total = len(questions)
-
-            for i, q in enumerate(questions, start=1):
-                correct_answer = q.get("answer", "")
-                user_answer = st.session_state.quiz_answers[vid].get(i)
-
-                if user_answer == correct_answer:
-                    score += 1
-
-            st.markdown(f"**점수: {score} / {total}**")
-
-    # ----------------------------
-    # Challenge
-    # ----------------------------
-    if challenge:
-        st.markdown("##### Challenge")
-
-        for i, q in enumerate(challenge, start=1):
-            with st.expander(f"도전문제 {i}"):
-
-                st.write(q.get("question", ""))
-
-                with st.expander("정답 보기"):
-                    ans = q.get("answer", "")
-
-                    # ```python 코드블록 제거 후 코드만 보여주기
-                    if "```python" in ans:
-                        cleaned = ans.replace("```python", "").replace("```", "").strip()
-                        st.code(cleaned, language="python")
-                    else:
-                        st.write(ans)
+                        # ```python 코드블록 제거 후 코드만 보여주기
+                        if "```python" in ans:
+                            cleaned = ans.replace("```python", "").replace("```", "").strip()
+                            st.code(cleaned, language="python")
+                        else:
+                            st.write(ans)
