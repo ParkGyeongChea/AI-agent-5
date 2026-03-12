@@ -38,7 +38,7 @@ if "quiz_submitted" not in st.session_state:
 
 
 st.set_page_config(layout="wide")
-st.title("영상 추천 AI Agent")
+st.title("🎓🤖 영상 추천 AI Agent")
 
 
 # ----------------------------
@@ -86,7 +86,7 @@ def fetch_quiz(video_id: str, questions: int = 5, difficulty: str = "mid"):
 
     try:
         r = requests.post(
-            f"{BACKEND_URL}/test/video/service/quiz/{video_id}",
+            f"{BACKEND_URL}/video/service/quiz/{video_id}",
             params={
                 "questions": questions,
                 "difficulty": difficulty
@@ -120,8 +120,16 @@ with st.form("search_form", clear_on_submit=False):
         )
 
     with top2:
-        fetch_btn = st.form_submit_button("관련 영상 3개 가져오기", use_container_width=True)
+        # fetch_btn = st.form_submit_button("관련 영상 3개 가져오기", use_container_width=True)
+        
+        fetch_btn = st.form_submit_button(
+            "관련 영상 3개 가져오기",
+            use_container_width=True,
+            type="primary"
+        )
+        
 
+st.markdown("---")
 
 if fetch_btn:
 
@@ -135,7 +143,7 @@ if fetch_btn:
         with st.spinner("추천 영상 가져오는 중..."):
 
             r = requests.post(
-                f"{BACKEND_URL}/test/video/{encoded_keyword}",
+                f"{BACKEND_URL}/video/search/{encoded_keyword}",
                 timeout=30,
             )
 
@@ -182,7 +190,7 @@ if fetch_btn:
                         try:
 
                             sr = requests.post(
-                                f"{BACKEND_URL}/test/video/info/full/{first_vid}",
+                                f"{BACKEND_URL}/video/info/full/{first_vid}",
                                 timeout=120
                             )
 
@@ -204,7 +212,7 @@ left, right = st.columns([0.60, 0.40], gap="large")
 
 with left:
 
-    st.subheader("Video")
+    st.subheader("🎬 Video")
 
     if not st.session_state.selected:
 
@@ -236,7 +244,7 @@ with left:
             height=580
         )
 
-        st.markdown("### Recommend List")
+        st.markdown("### 🔎 Recommend List")
 
         for v in st.session_state.videos:
 
@@ -255,15 +263,21 @@ with left:
 
                 channel_name = (v.get("channel_name") or "").strip()
 
-                if st.button(title_btn, key=f"sel_{v['video_id']}"):
+                is_selected = st.session_state.selected == v["video_id"]
+                
+                if is_selected:
+                    st.markdown(f"✅ {title_btn}")
+                else:
 
-                    st.session_state.selected = v["video_id"]
+                    if st.button(title_btn, key=f"sel_{v['video_id']}"):
 
-                    st.session_state.start_sec = 0
+                        st.session_state.selected = v["video_id"]
 
-                    st.session_state.autoplay_once = False
+                        st.session_state.start_sec = 0
 
-                    st.rerun()
+                        st.session_state.autoplay_once = False
+
+                        st.rerun()
 
                 if channel_name:
 
@@ -286,7 +300,7 @@ with left:
 
 with right:
 
-    st.subheader("Summary / Timeline")
+    st.subheader("🧠 Summary / Timeline")
 
     vid = st.session_state.selected
 
@@ -299,7 +313,7 @@ with right:
         with st.spinner("요약 생성 중..."):
 
             r = requests.post(
-                f"{BACKEND_URL}/test/video/info/full/{vid}",
+                f"{BACKEND_URL}/video/info/full/{vid}",
                 timeout=120
             )
 
@@ -313,7 +327,7 @@ with right:
 
     data = st.session_state.detail_cache[vid]
 
-    st.markdown("#### Summary")
+    st.markdown("#### 📝 Summary")
 
     summary_text = data.get("summary", "")
 
@@ -327,10 +341,10 @@ with right:
 
     if description:
 
-        with st.expander("Description"):
+        with st.expander("📄 Description"):
             st.write(description)
 
-    st.markdown("#### Timeline")
+    st.markdown("#### ⏱️ Timeline")
 
     timeline = data.get("timeline", [])
 
@@ -357,10 +371,11 @@ with right:
 
                     st.rerun()
 
-        # ----------------------------
+    # ----------------------------
     # Quiz
     # ----------------------------
-    st.markdown("#### Quiz")
+    st.markdown("---")
+    st.markdown("#### 🧩 Quiz")
 
     # 현재 영상 기준 상태 초기화
     if vid not in st.session_state.quiz_answers:
@@ -391,7 +406,8 @@ with right:
             for i, q in enumerate(questions, start=1):
                 q_key = f"{vid}_q_{i}"
                 question_text = q.get("question", "")
-                options = q.get("options", [])
+                question_text = question_text.replace("<br>", "\n")
+                options = [opt.replace("<br>", "\n") for opt in q.get("options", [])]
 
                 with st.expander(f"Q{i}. {ellipsis(question_text, 100)}", expanded=(i == 1)):
                     st.write(question_text)
@@ -459,7 +475,12 @@ with right:
                     if user_answer == correct_answer:
                         score += 1
 
-                st.markdown(f"**점수: {score} / {total}**")
+                if score == total:
+                    st.success(f"점수: {score} / {total} 🎉")
+                elif score >= total // 2:
+                    st.info(f"점수: {score} / {total}")
+                else:
+                    st.warning(f"점수: {score} / {total}")
 
         # ----------------------------
         # Challenge
@@ -480,4 +501,4 @@ with right:
                             cleaned = ans.replace("```python", "").replace("```", "").strip()
                             st.code(cleaned, language="python")
                         else:
-                            st.write(ans)
+                            st.markdown(ans, unsafe_allow_html=True)
