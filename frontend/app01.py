@@ -38,7 +38,7 @@ if "quiz_submitted" not in st.session_state:
 
 
 st.set_page_config(layout="wide")
-st.title("🎓🤖 영상 추천 AI Agent")
+st.title("🎓🤖 유튜브 기반 학습 콘텐츠 큐레이션")
 
 
 # ----------------------------
