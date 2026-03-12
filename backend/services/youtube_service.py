@@ -14,8 +14,11 @@ from schemas.youtube_schema import YouTubeInfo, YouTubeTranscribe, YouTubeFullDe
 from typing import List, Dict
 from fastapi import HTTPException
 from pathlib import Path
-#######################################################################
-# 영상 시간 제한 추가 함수 ,26 3.5 추가
+
+
+# def is_korean(text: str) -> bool:
+#     return any('가' <= c <= '힣' for c in text)
+#한글 영상만 나오게 하는 코드
 
 def get_video_list(query: str, count: int = 3) -> List[YouTubeInfo]:
 
@@ -27,20 +30,36 @@ def get_video_list(query: str, count: int = 3) -> List[YouTubeInfo]:
         
             for video in info.get("entries", []):
                 
-                duration = video.get("duration",0)
-
-                #30분 이상 영상은 제외
+                duration = video.get("duration") or 0
+                
+                #연령 제한 영상 제외
+                # age_limit = video.get("age_limit") or 0
+                 
+                 #30분 이상 영상은 제외
                 if duration > MAX_VIDEO_DURATION_SECODS:
                     continue
+                
+                #연령 제한 영상 제외
+                # if age_limit >= 18:
+                #     continue
+                
+                #  한글 영상만 허용
+                # title = video.get("title", "")
+                
+                #한글 영상만 허용
+                # if not is_korean(title):
+                #     continue
+            
                 results.append(
                     YouTubeInfo(
                         video_id=video.get("id", ""),
                         title=video.get("title", ""),
-                        url=video.get("webpage_url", ""),
+                        url=f"https://www.youtube.com/watch?v={video.get('id','')}",
                         thumbnail_url=f"https://img.youtube.com/vi/{video.get('id', '')}/0.jpg",
                         description=video.get("description", "") or "", #3.6추가, 검색 결과에서 설명을 같이 담음
                         channel_name=video.get("uploader", ""),
-                        duration=video.get("duration", 0)
+                        # duration=video.get("duration", 0)
+                        duration=duration
                     )
                 )
                 #개수 채우면 종료
@@ -50,30 +69,7 @@ def get_video_list(query: str, count: int = 3) -> List[YouTubeInfo]:
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-#######################################################################
 
-         
-
-# def get_video_metadata(video_id: str) -> YouTubeMetaData:
-#     """유튜브 영상 메타 정보 반환"""
-    
-#     try:
-#         url = f"https://www.youtube.com/watch?v={video_id}"
-
-#         with yt_dlp.YoutubeDL({"quiet": True, "skip_download": True}) as ydl:
-#             info = ydl.extract_info(url, download=False)
-
-#         return YouTubeMetaData(
-#             video_id=info.get("id", ""),
-#             title=info.get("title", ""),
-#             channel_name=info.get("uploader", ""),
-#             description=info.get("description", ""),
-#             thumbnail_url=info.get("thumbnail"),
-#             url=url
-#         )
-
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
 
 
 def _parse_vtt(text) -> List[Dict]:
