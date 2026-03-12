@@ -57,3 +57,5 @@ with col_right:
     # 🔥 영상 목록이 있을 때만 출력
     if st.session_state.videos:
         render_summary_panel()
+        
+# test
