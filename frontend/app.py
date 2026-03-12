@@ -38,7 +38,7 @@ if "quiz_submitted" not in st.session_state:
 
 
 st.set_page_config(layout="wide")
-st.title("영상 추천 AI Agent")
+st.title("🎓🤖 영상 추천 AI Agent")
 
 
 # ----------------------------
@@ -120,8 +120,16 @@ with st.form("search_form", clear_on_submit=False):
         )
 
     with top2:
-        fetch_btn = st.form_submit_button("관련 영상 3개 가져오기", use_container_width=True)
+        # fetch_btn = st.form_submit_button("관련 영상 3개 가져오기", use_container_width=True)
+        
+        fetch_btn = st.form_submit_button(
+            "관련 영상 3개 가져오기",
+            use_container_width=True,
+            type="primary"
+        )
+        
 
+st.markdown("---")
 
 if fetch_btn:
 
@@ -204,7 +212,7 @@ left, right = st.columns([0.60, 0.40], gap="large")
 
 with left:
 
-    st.subheader("Video")
+    st.subheader("🎬 Video")
 
     if not st.session_state.selected:
 
@@ -236,7 +244,7 @@ with left:
             height=580
         )
 
-        st.markdown("### Recommend List")
+        st.markdown("### 🔎 Recommend List")
 
         for v in st.session_state.videos:
 
@@ -255,15 +263,21 @@ with left:
 
                 channel_name = (v.get("channel_name") or "").strip()
 
-                if st.button(title_btn, key=f"sel_{v['video_id']}"):
+                is_selected = st.session_state.selected == v["video_id"]
+                
+                if is_selected:
+                    st.markdown(f"✅ {title_btn}")
+                else:
 
-                    st.session_state.selected = v["video_id"]
+                    if st.button(title_btn, key=f"sel_{v['video_id']}"):
 
-                    st.session_state.start_sec = 0
+                        st.session_state.selected = v["video_id"]
 
-                    st.session_state.autoplay_once = False
+                        st.session_state.start_sec = 0
 
-                    st.rerun()
+                        st.session_state.autoplay_once = False
+
+                        st.rerun()
 
                 if channel_name:
 
@@ -286,7 +300,7 @@ with left:
 
 with right:
 
-    st.subheader("Summary / Timeline")
+    st.subheader("🧠 Summary / Timeline")
 
     vid = st.session_state.selected
 
@@ -313,7 +327,7 @@ with right:
 
     data = st.session_state.detail_cache[vid]
 
-    st.markdown("#### Summary")
+    st.markdown("#### 📝 Summary")
 
     summary_text = data.get("summary", "")
 
@@ -327,10 +341,10 @@ with right:
 
     if description:
 
-        with st.expander("Description"):
+        with st.expander("📄 Description"):
             st.write(description)
 
-    st.markdown("#### Timeline")
+    st.markdown("#### ⏱️ Timeline")
 
     timeline = data.get("timeline", [])
 
@@ -357,10 +371,11 @@ with right:
 
                     st.rerun()
 
-        # ----------------------------
+    # ----------------------------
     # Quiz
     # ----------------------------
-    st.markdown("#### Quiz")
+    st.markdown("---")
+    st.markdown("#### 🧩 Quiz")
 
     # 현재 영상 기준 상태 초기화
     if vid not in st.session_state.quiz_answers:
@@ -460,13 +475,18 @@ with right:
                     if user_answer == correct_answer:
                         score += 1
 
-                st.markdown(f"**점수: {score} / {total}**")
+                if score == total:
+                    st.success(f"점수: {score} / {total} 🎉")
+                elif score >= total // 2:
+                    st.info(f"점수: {score} / {total}")
+                else:
+                    st.warning(f"점수: {score} / {total}")
 
         # ----------------------------
         # Challenge
         # ----------------------------
         if challenge:
-            st.markdown("##### Challenge")
+            st.markdown("##### 🧩 Challenge")
 
             for i, q in enumerate(challenge, start=1):
                 with st.expander(f"도전문제 {i}"):
@@ -481,4 +501,4 @@ with right:
                             cleaned = ans.replace("```python", "").replace("```", "").strip()
                             st.code(cleaned, language="python")
                         else:
-                            st.write(ans)
+                            st.markdown(ans, unsafe_allow_html=True)
