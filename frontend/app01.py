@@ -406,14 +406,14 @@ with right:
             for i, q in enumerate(questions, start=1):
                 q_key = f"{vid}_q_{i}"
 
-                # 질문과 옵션 모두 <br> → \n 치환
+                # <br> 태그 치환
                 question_text = q.get("question", "").replace("<br>", "\n")
                 options = [opt.replace("<br>", "\n") for opt in q.get("options", [])]
 
-                # 정답도 동일하게 치환 + strip (오답 처리 버그 수정)
-                correct_answer = q.get("answer", "").replace("<br>", "\n").strip()
+                # answer는 인덱스(0~3)로 저장
+                correct_idx = int(q.get("answer", -1))
 
-                # expander 제목에만 질문 표시 (중복 제거를 위해 내부 st.write 삭제)
+               
                 with st.expander(f"Q{i}. {ellipsis(question_text, 100)}", expanded=(i == 1)):
 
                     if options:
@@ -425,22 +425,24 @@ with right:
                             label_visibility="collapsed",
                         )
 
-                        # 선택값 저장
+                        #  선택값을 텍스트 → 인덱스로 변환해서 저장
                         if selected is not None:
-                            st.session_state.quiz_answers[vid][i] = selected
+                            st.session_state.quiz_answers[vid][i] = options.index(selected)
 
                     # 채점 이후에만 정답/결과 표시
                     if st.session_state.quiz_submitted[vid]:
-                        user_answer = st.session_state.quiz_answers[vid].get(i, "")
+                        user_idx = st.session_state.quiz_answers[vid].get(i, None)
 
-                        # strip()으로 앞뒤 공백 차이도 방지
-                        if user_answer.strip() == correct_answer:
+                        #  인덱스끼리 비교
+                        if user_idx == correct_idx:
                             st.success("정답입니다.")
                         else:
                             st.error("오답입니다.")
 
                         with st.expander("정답 보기", expanded=False):
-                            st.write(correct_answer)
+                            #  정답 텍스트는 표시할 때만 인덱스로 꺼냄
+                            if 0 <= correct_idx < len(options):
+                                st.write(options[correct_idx])
 
             # ----------------------------
             # 채점 / 다시풀기
@@ -473,11 +475,11 @@ with right:
                 total = len(questions)
 
                 for i, q in enumerate(questions, start=1):
-                    # 점수 계산도 동일하게 치환 + strip 적용
-                    correct_answer = q.get("answer", "").replace("<br>", "\n").strip()
-                    user_answer = st.session_state.quiz_answers[vid].get(i, "")
+                    # 인덱스끼리 비교
+                    correct_idx = int(q.get("answer", -1))
+                    user_idx = st.session_state.quiz_answers[vid].get(i, None)
 
-                    if user_answer.strip() == correct_answer:
+                    if user_idx == correct_idx:
                         score += 1
 
                 if score == total:
@@ -496,12 +498,11 @@ with right:
             for i, q in enumerate(challenge, start=1):
                 with st.expander(f"도전문제 {i}"):
 
-                    # <br> → \n 치환 후 마크다운 렌더링
+                    # <br> 치환 후 렌더링
                     challenge_q = q.get("question", "").replace("<br>", "\n")
                     st.markdown(challenge_q)
 
                     with st.expander("정답 보기"):
-                        # 정답도 치환 적용
                         ans = q.get("answer", "").replace("<br>", "\n")
 
                         if "```python" in ans:
