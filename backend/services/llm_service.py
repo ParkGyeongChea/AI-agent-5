@@ -22,30 +22,25 @@ llm = ChatOpenAI(
 )
 
 
-def split_transcript_into_chunks(transcript_list: list, chunk_size: int = 200):
-    #추후에 token chunk 로 변경될 수도 있음
-    
-    """
-    자막 리스트를 chunk_size 단위로 나누는 함수
-    
-    transcript_list 예:
-    [
-        {"start":"00:00","text":"안녕하세요"},
-        {"start":"00:02","text":"오늘은"}
-    ]
-    """
+def split_transcript_into_chunks(transcript_list, chunk_size=200):
     chunks = []
-    
     for i in range(0, len(transcript_list), chunk_size):
-        
         chunk = transcript_list[i:i + chunk_size]
+        start = chunk[0]["start"]
         
-        text = ""
-        for line in chunk:
-            text += f"{line['start']}) {line['text']}\n"
-            
-        chunks.append(text)
-            
+        # 가능하면 데이터에 있는 실제 종료 시간 사용, 없다면 기존 로직 유지
+        end = chunk[-1].get("end", chunk[-1]["start"]) 
+
+        text = "\n".join(
+            f"{line['start']}) {line['text']}"
+            for line in chunk
+        )
+
+        chunks.append({
+            "start": start,
+            "end": end,
+            "text": text
+        })
     return chunks
 
 
@@ -98,69 +93,52 @@ def summarize_video(title: str, description: str) -> str:
 
 
 async def summarize_transcript(transcript_data: list) -> dict: 
-    """
-    자막을 기반으로 영상 전체 요약 + 타임라인 요약 생성 (chunk 기반)
-    반환 예:
-    {
-      "summary": "...",
-      "timeline": [{"time":"00:00","summary":"..."}, ...]
-    }
-    """
-
     try:
+        chunks = split_transcript_into_chunks(transcript_data)
         
-        transcript_list = transcript_data
-        chunks = split_transcript_into_chunks(transcript_list)
+        semaphore = asyncio.Semaphore(5)
+        async def process_chunk(chunk):
+            async with semaphore:
+                chunk_prompt = f"""
+                Task: 다음은 영상의 {chunk['start']}부터 {chunk['end']}까지의 자막입니다. 
+                이 구간의 핵심 내용을 2~3문장으로 요약해 주세요. 
+                요약의 첫머리에는 반드시 시작 시간({chunk['start']})을 표기해 주세요.
+                
+                [자막]
+                {chunk['text']}
+                """
+                return await llm.ainvoke(chunk_prompt)
 
-       
-        tasks = []
-        
-        for idx, chunk in enumerate(chunks, start=1):
-            chunk_prompt = f"""
-            아래는 유튜브 영상 자막의 일부(조각)이다.
-
-            [자막 조각 {idx}]
-            {chunk}
-
-            할 일:
-            - 이 조각의 핵심 내용을 2~3줄로 한국어로 요약하라.
-            - 반드시 '문장' 형태로만 출력하라. (JSON 금지)
-            """
-            
-            tasks.append(llm.ainvoke(chunk_prompt))
-            
+        tasks = [process_chunk(chunk) for chunk in chunks]
         responses = await asyncio.gather(*tasks)
         
-        chunk_summaries = [
-             resp.content.strip()
-             for resp in responses
-        ]
-
-        
-        merged = "\n".join(chunk_summaries)
+        chunk_summaries = [resp.content.strip() for resp in responses]
+        merged = "\n\n".join(chunk_summaries)
 
         final_prompt = f"""
-        아래는 유튜브 영상 자막을 여러 조각으로 나눠 요약한 결과 모음이다.
-
-        {merged}
-
-        위 내용을 바탕으로 아래 JSON 형식으로만 출력하라.
-
+        Role: YT Analyst
+        Task: Generate 4-10 chronological chapters from transcript.
+        Input: {merged}
+        
+        Condition: 
+        - If input is empty/null: "summary": "자막소스가 제공되지 않습니다.", "timeline": [].
+        - Else: 4-5 line overview & 4-10 major chapter titles.
+        
+        Output Format (STRICT JSON ONLY): Korean.
         {{
-          "summary": "영상 전체 요약 (4~5줄)",
-          "timeline": [
-            {{"time":"00:00","summary":"내용"}},
-            {{"time":"05:00","summary":"내용"}},
-            {{"time":"10:00","summary":"내용"}}
-          ]
+            "summary": "overview text",
+            "timeline": [
+                {{"time": "MM:SS", "summary": "Chapter Title"}}
+            ]
         }}
         """
-
+        
+        final_resp = await llm.ainvoke(final_prompt)
+        
+        # JsonOutputParser는 보통 알아서 ```json을 처리해주므로 바로 넘겨도 됩니다.
+        # 혹시 모를 에러를 대비해 직접 파싱을 돕는다면 LLM 체인 형태로 묶는 것이 더 우아합니다.
         parser = JsonOutputParser()
-        final_resp = llm.invoke(final_prompt)
-        content = final_resp.content.replace("```json", "").replace("```", "")
-        result = parser.parse(content)
-
+        result = parser.invoke(final_resp)
         
         if "summary" not in result:
             result["summary"] = ""
@@ -170,8 +148,11 @@ async def summarize_transcript(transcript_data: list) -> dict:
         return result
 
     except Exception as e:
-        print(e)
-        return {"summary": "", "timeline": []}
+        return {
+            "summary": "",
+            "timeline": [],
+            "error": str(e)
+        }
     
     
 ##########

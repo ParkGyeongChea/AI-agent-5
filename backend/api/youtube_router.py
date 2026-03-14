@@ -214,7 +214,7 @@ async def get_video_full_detail(video_id:str):
 
     # 자막 가져오기
     transcript = full_data.transcribe.transcript
-
+    print("")
     #자막 없는 영상 gpt 호출하지 않는 코드 , 이 코드 적용하려면 아래 영상 요약 코드 주석 처리 필요.
     # if transcript:
     #     summary_data = await llm_service.summarize_transcript(transcript)
@@ -222,8 +222,8 @@ async def get_video_full_detail(video_id:str):
     #     summary_data = {"summary": "", "timeline": []}
 
     # 영상 요약
+    # summary_data = await llm_service.summarize_transcript(transcript)
     summary_data = await llm_service.summarize_transcript(transcript)
-
     full_data.summary = summary_data.get("summary")
     full_data.timeline = summary_data.get("timeline")
 
