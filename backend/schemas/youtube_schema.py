@@ -9,7 +9,7 @@ class YouTubeInfo(BaseModel):
     title:str = Field(description="영상 제목")
     url:str = Field(description="영상 url")
     thumbnail_url:str|None = Field(description="썸네일")
-    description:str = Field(default="", description="영상 설명") #3.6 코드 추가, 검색 결과만으로 추천 요약 가능
+    description:str = Field(default="", description="영상 설명") 
     channel_name:str = Field(description="채널")
     duration:int = Field(description="영상길이(초)")
     
@@ -26,11 +26,6 @@ class YouTubeTranscribe(BaseModel):
         for line in self.transcript:
             full_text += f"{line['start']}) {line['text']}\n"
         return full_text
-
-# class YouTubeMetaData(YouTubeInfo):
-#     """유튜브 메타 정보"""
-#     description:str = Field(description="설명")    
-#     channel_name:str = Field(description="채널")
 
 class YouTubeFullDetail(BaseModel):
     """유튜브 메타정보, 챕터, 자막을 모두 포함하는 종합 데이터"""

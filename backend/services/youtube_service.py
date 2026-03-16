@@ -1,24 +1,14 @@
 
 # YouTube API 연동 서비스
 
-# - YouTube Data API 호출
-# - 영상 검색
-# - 영상 데이터 가공
-# - 썸네일, 제목, 설명 정리
-
-# ※ 외부 API 통신 로직은 이 파일에서 관리한다.
 
 import yt_dlp, requests, json
-from core.config import MAX_VIDEO_DURATION_SECODS # 추가
+from core.config import MAX_VIDEO_DURATION_SECODS 
 from schemas.youtube_schema import YouTubeInfo, YouTubeTranscribe, YouTubeFullDetail, YouTubeTimeLine
 from typing import List, Dict
 from fastapi import HTTPException
 from pathlib import Path
 
-
-# def is_korean(text: str) -> bool:
-#     return any('가' <= c <= '힣' for c in text)
-#한글 영상만 나오게 하는 코드
 
 def get_video_list(query: str, count: int = 3) -> List[YouTubeInfo]:
 
@@ -32,23 +22,8 @@ def get_video_list(query: str, count: int = 3) -> List[YouTubeInfo]:
                 
                 duration = video.get("duration") or 0
                 
-                #연령 제한 영상 제외
-                # age_limit = video.get("age_limit") or 0
-                 
-                 #30분 이상 영상은 제외
                 if duration > MAX_VIDEO_DURATION_SECODS:
                     continue
-                
-                #연령 제한 영상 제외
-                # if age_limit >= 18:
-                #     continue
-                
-                #  한글 영상만 허용
-                # title = video.get("title", "")
-                
-                #한글 영상만 허용
-                # if not is_korean(title):
-                #     continue
             
                 results.append(
                     YouTubeInfo(
@@ -56,13 +31,12 @@ def get_video_list(query: str, count: int = 3) -> List[YouTubeInfo]:
                         title=video.get("title", ""),
                         url=f"https://www.youtube.com/watch?v={video.get('id','')}",
                         thumbnail_url=f"https://img.youtube.com/vi/{video.get('id', '')}/0.jpg",
-                        description=video.get("description", "") or "", #3.6추가, 검색 결과에서 설명을 같이 담음
+                        description=video.get("description", "") or "", 
                         channel_name=video.get("uploader", ""),
-                        # duration=video.get("duration", 0)
                         duration=duration
                     )
                 )
-                #개수 채우면 종료
+                
                 if len(results) == count:
                     break
             return results
@@ -136,7 +110,6 @@ def get_video_transcribe(video_id: str) -> YouTubeTranscribe:
                 for sub in subs:
                     if sub.get('ext') == 'vtt':
                         sub_url = sub['url']
-                        # 현재 찾은 언어(lang)를 정확히 출력합니다.
                         print(f"[{lang}] vtt 자막 URL: {sub_url}")
                         break
                 
@@ -172,10 +145,6 @@ def _format_time(seconds):
 
 def get_video_timeline(video_id:str):
     """유튜브 영상 챕터 반환"""
-    
-    # 테스트용 id
-    # "rb3ZYR_Q1po" - 챕터 없음, 자막 있음
-    # "LcPrSL4sEOc" - 챕터 있음, 자막 없음
 
     with yt_dlp.YoutubeDL({"quiet": True, "skip_download": True}) as ydl:
         info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)

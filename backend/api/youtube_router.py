@@ -4,7 +4,7 @@
 from fastapi import APIRouter
 from typing import List
 from pydantic import BaseModel
-import asyncio #3.6 추가
+import asyncio 
 from schemas.youtube_schema import YouTubeInfo, YouTubeTimeLine, YouTubeFullDetail, YouTubeTranscribe
 from services import youtube_service, llm_service
 
@@ -18,9 +18,6 @@ class RequestData(BaseModel):
 async def get_video_infos(query:str):
     return youtube_service.get_video_list(query=query)
 
-# @router.post("/video/info/metadata/{viedo_id}", response_model=YouTubeInfo)
-# async def get_video_data(viedo_id:str):
-#     return youtube_service.get_video_metadata(video_id=viedo_id)
 
 @router.post("/video/info/transcribe/{video_id}", response_model=YouTubeTranscribe)
 async def get_transcrabe(video_id:str):
@@ -30,35 +27,12 @@ async def get_transcrabe(video_id:str):
 async def get_video_timeline(video_id:str):
     return youtube_service.get_video_timeline(video_id)
 
-# @router.post("/video/info/full/{viedo_id}", response_model=YouTubeFullDetail)
-# async def get_video_full_detail(viedo_id:str):
-    
-    
-#     full_data = youtube_service.get_video_full_detail(viedo_id)
-    
-#     summary_data = await llm_service.summarize_transcript(
-#         full_data.transcribe.transcript
-#     )
-    
-#     full_data.summary = summary_data.get("summary")
-#     full_data.timeline = summary_data.get("timeline")
-    
-    
-#     return full_data
-
-
 @router.post("/video/info/full/{viedo_id}", response_model=YouTubeFullDetail)
 async def get_video_full_detail(video_id:str):
     full_data = youtube_service.get_video_full_detail(video_id)
 
     # 자막 가져오기
     transcript = full_data.transcribe.transcript
-
-    #자막 없는 영상 gpt 호출하지 않는 코드 , 이 코드 적용하려면 아래 영상 요약 코드 주석 처리 필요.
-    # if transcript:
-    #     summary_data = await llm_service.summarize_transcript(transcript)
-    # else:
-    #     summary_data = {"summary": "", "timeline": []}
 
     # 영상 요약
     summary_data = await llm_service.summarize_transcript(transcript)
@@ -91,7 +65,7 @@ async def get_video_lecture_note(video_id:str):
     return result
 
 @router.post("/video/service/quiz/{viedo_id}")
-async def get_video_quiz(viedo_id:str, questions:int=5, difficulty="mid"): # Low | Mid | High
+async def get_video_quiz(viedo_id:str, questions:int=5, difficulty="mid"):
     """
     강의 영상에 맞는 퀴즈를 생성한다.  - LLM 모델 호출
     """
@@ -99,34 +73,6 @@ async def get_video_quiz(viedo_id:str, questions:int=5, difficulty="mid"): # Low
     transcripts = youtube_service.get_video_transcribe(video_id=viedo_id)
     result = llm_service.get_video_quiz(transcripts.get_full_transcript(), difficulty, questions)
     return result
-
-# @router.post("/recommend")
-# def recommend(data: RequestData):
-
-#     videos = youtube_service.get_video_list(query=data.query, count=3)
-
-#     result = []
-
-#     for video in videos:
-#         metadata = youtube_service.get_video_metadata(video.video_id)
-
-#         summary = llm_service.summarize_video(
-#             metadata.title,
-#             metadata.description
-#         )
-
-#         result.append({
-#             "title": metadata.title,
-#             "url": f"https://www.youtube.com/watch?v={metadata.video_id}",
-#             "description": metadata.description,
-#             "thumbnail": metadata.thumbnail_url,
-#             "llm_output": summary
-#         })
-
-#     return {"videos": result}
-
-#이 코드는 영상마다 GPT를 호출
-
 
 
 @router.post("/recommend")
@@ -166,7 +112,7 @@ def recommend(data: RequestData):
 async def recommend_full(data: RequestData):
 
     videos = youtube_service.get_video_list(query=data.query, count=3)
-    tasks = [] #비동기 작업 담을 빈 리스트 여기에 영상 3개를 넣고 한번에 실행
+    tasks = [] 
 
     for video in videos:
         video_id = video.video_id 
@@ -194,10 +140,6 @@ class RequestData(BaseModel):
 async def get_video_infos(query:str):
     return youtube_service.get_video_list(query=query)
 
-# @router.post("/video/info/metadata/{viedo_id}", response_model=YouTubeInfo)
-# async def get_video_data(viedo_id:str):
-#     return youtube_service.get_video_metadata(video_id=viedo_id)
-
 @router.post("/video/info/transcribe/{video_id}", response_model=YouTubeTranscribe)
 async def get_transcribe(video_id:str):
     return youtube_service.get_video_transcribe(video_id)
@@ -215,14 +157,6 @@ async def get_video_full_detail(video_id:str):
     # 자막 가져오기
     transcript = full_data.transcribe.transcript
     print("")
-    #자막 없는 영상 gpt 호출하지 않는 코드 , 이 코드 적용하려면 아래 영상 요약 코드 주석 처리 필요.
-    # if transcript:
-    #     summary_data = await llm_service.summarize_transcript(transcript)
-    # else:
-    #     summary_data = {"summary": "", "timeline": []}
-
-    # 영상 요약
-    # summary_data = await llm_service.summarize_transcript(transcript)
     summary_data = await llm_service.summarize_transcript(transcript)
     full_data.summary = summary_data.get("summary")
     full_data.timeline = summary_data.get("timeline")
@@ -295,12 +229,11 @@ def recommend(data: RequestData):
 
 
 
-
 @router.post("/recommend/full")
 async def recommend_full(data: RequestData):
 
     videos = youtube_service.get_video_list(query=data.query, count=3)
-    tasks = [] #비동기 작업 담을 빈 리스트 여기에 영상 3개를 넣고 한번에 실행
+    tasks = [] 
 
     for video in videos:
         video_id = video.video_id 

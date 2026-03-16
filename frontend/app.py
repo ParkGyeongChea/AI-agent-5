@@ -405,12 +405,16 @@ with right:
 
             for i, q in enumerate(questions, start=1):
                 q_key = f"{vid}_q_{i}"
-                question_text = q.get("question", "")
-                question_text = question_text.replace("<br>", "\n")
+
+                # 질문과 옵션 모두 <br> → \n 치환
+                question_text = q.get("question", "").replace("<br>", "\n")
                 options = [opt.replace("<br>", "\n") for opt in q.get("options", [])]
 
+                # 정답도 동일하게 치환 + strip (오답 처리 버그 수정)
+                correct_answer = q.get("answer", "").replace("<br>", "\n").strip()
+
+                # expander 제목에만 질문 표시 (중복 제거를 위해 내부 st.write 삭제)
                 with st.expander(f"Q{i}. {ellipsis(question_text, 100)}", expanded=(i == 1)):
-                    st.write(question_text)
 
                     if options:
                         selected = st.radio(
@@ -427,10 +431,10 @@ with right:
 
                     # 채점 이후에만 정답/결과 표시
                     if st.session_state.quiz_submitted[vid]:
-                        correct_answer = q.get("answer", "")
-                        user_answer = st.session_state.quiz_answers[vid].get(i)
+                        user_answer = st.session_state.quiz_answers[vid].get(i, "")
 
-                        if user_answer == correct_answer:
+                        # strip()으로 앞뒤 공백 차이도 방지
+                        if user_answer.strip() == correct_answer:
                             st.success("정답입니다.")
                         else:
                             st.error("오답입니다.")
@@ -469,10 +473,11 @@ with right:
                 total = len(questions)
 
                 for i, q in enumerate(questions, start=1):
-                    correct_answer = q.get("answer", "")
-                    user_answer = st.session_state.quiz_answers[vid].get(i)
+                    # 점수 계산도 동일하게 치환 + strip 적용
+                    correct_answer = q.get("answer", "").replace("<br>", "\n").strip()
+                    user_answer = st.session_state.quiz_answers[vid].get(i, "")
 
-                    if user_answer == correct_answer:
+                    if user_answer.strip() == correct_answer:
                         score += 1
 
                 if score == total:
@@ -491,14 +496,16 @@ with right:
             for i, q in enumerate(challenge, start=1):
                 with st.expander(f"도전문제 {i}"):
 
-                    st.write(q.get("question", ""))
+                    # <br> → \n 치환 후 마크다운 렌더링
+                    challenge_q = q.get("question", "").replace("<br>", "\n")
+                    st.markdown(challenge_q)
 
                     with st.expander("정답 보기"):
-                        ans = q.get("answer", "")
+                        # 정답도 치환 적용
+                        ans = q.get("answer", "").replace("<br>", "\n")
 
-                        # ```python 코드블록 제거 후 코드만 보여주기
                         if "```python" in ans:
                             cleaned = ans.replace("```python", "").replace("```", "").strip()
                             st.code(cleaned, language="python")
                         else:
-                            st.markdown(ans, unsafe_allow_html=True)
+                            st.markdown(ans)
